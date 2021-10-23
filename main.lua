@@ -123,7 +123,20 @@ function love.draw()
     drawBoundingBox(ship1)
     drawBoundingBox(ship2)
 
+    displayFPS()
+
     push:finish()
+end
+
+--[[
+    Renders the current FPS.
+]]
+function displayFPS()
+    -- simple FPS display across all states
+    love.graphics.setFont(love.graphics.newFont(12))
+    love.graphics.setColor(0, 255/255, 0, 255/255)
+    love.graphics.print('FPS: ' .. tostring(love.timer.getFPS()), 10, 10)
+    love.graphics.setColor(255, 255, 255, 255)
 end
 
 function drawBoundingBox(object)
