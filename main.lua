@@ -42,11 +42,12 @@ function love.load()
     push:setupScreen(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT)    
     love.graphics.setDefaultFilter("nearest", "nearest")
     gameState = 'title'
-    -- windowBounds = {
-    --     x = 0
-    --     y = 0
-    --     size = VIRTUAL_WIDTH
-    --     boundingBox = BoundingBox:create(windowBounds)
+    windowBounds = {}
+    windowBounds.x = 0
+    windowBounds.y = 0
+    windowBounds.sizeX = VIRTUAL_WIDTH
+    windowBounds.sizeY = VIRTUAL_HEIGHT
+    windowBounds.boundingBox = BoundingBox:create(windowBounds)
 end
 
 function love.update(dt)
@@ -161,7 +162,8 @@ function resetGame()
 
     score1 = 0
     score2 = 0
-    ship1.size = 32
+    ship1.sizeX = 32
+    ship1.sizeY = 32
     ship1.x = 50
     ship1.y = VIRTUAL_HEIGHT / 2
     ship1.dx = 0
@@ -177,7 +179,8 @@ function resetGame()
     ship1.boundOffset = 2
     ship1.boundingBox = BoundingBox:create(ship1)
 
-    ship2.size = 32
+    ship2.sizeX = 32
+    ship2.sizeY = 32
     ship2.x = VIRTUAL_WIDTH - 50
     ship2.y = VIRTUAL_HEIGHT / 2
     ship2.dx = 0
@@ -224,7 +227,7 @@ function updateShip(ship, dt)
     -- end
     updateBoundingBox(ship)
     
- then        ship.lastBullet = ship.lastBullet + dt
+then    ship.lastBullet = ship.lastBullet + dt
         ship.x = ship.x + ship.dx * dt
 
     end        ship.y = ship.y + ship.dy * dt
@@ -249,14 +252,14 @@ end
 function collides(thing1, thing2)
     b1 = thing1.boundingBox
     b2 = thing2.boundingBox
-    left1 = b1.x 
-    left2 = b2.x 
-    right1 = b1.x + b1.size
-    right2 = b2.x + b2.size
+    left1 = b1.x
+    left2 = b2.x
+    right1 = b1.x + b1.sizeX
+    right2 = b2.x + b2.sizeX
     top1 = b1.y
     top2 = b2.y
-    bottom1 = b1.y + b1.size
-    bottom2 = b2.y + b2.size
+    bottom1 = b1.y + b1.sizeY
+    bottom2 = b2.y + b2.sizeY
     
     --if either left or right edge of obj 1 is in between the left and right edges(x-values)of obj 2
     if (left1 > left2 and left1 < right2) or (right1 > left2 and right1 < right2) then
