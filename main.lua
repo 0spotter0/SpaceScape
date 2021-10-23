@@ -42,6 +42,11 @@ function love.load()
     push:setupScreen(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT)    
     love.graphics.setDefaultFilter("nearest", "nearest")
     gameState = 'title'
+    -- windowBounds = {
+    --     x = 0
+    --     y = 0
+    --     size = VIRTUAL_WIDTH
+    --     boundingBox = BoundingBox:create(windowBounds)
 end
 
 function love.update(dt)
@@ -189,16 +194,11 @@ function resetGame()
     ship2.boundingBox = BoundingBox:create(ship2)
 end
 
-function drawBullet(bullet)
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.rectangle("fill", bullet.x - 1, bullet.y - 1, 3, 3)
-end
-
 function updateShip(ship, dt)
     if love.keyboard.isDown(ship.rotKeyR) then
-        ship.r = ship.r + 0.07
+        ship.r = ship.r + 0.05
     elseif love.keyboard.isDown(ship.rotKeyL) then
-        ship.r = ship.r - 0.07
+        ship.r = ship.r - 0.05
     end
 
     if love.keyboard.isDown(ship.thrustKey) then
@@ -210,7 +210,7 @@ function updateShip(ship, dt)
         bulletArray[table.getn(bulletArray) + 1] = Bullet:create(ship)
         ship.lastBullet = 0
     end
-
+    
     -- if love.keyboard.isDown('right') then
     --     ship.dr = ship.dr + 0.01
     -- elseif love.keyboard.isDown('left') then
@@ -223,16 +223,27 @@ function updateShip(ship, dt)
     --     end
     -- end
     updateBoundingBox(ship)
+    
+ then        ship.lastBullet = ship.lastBullet + dt
+        ship.x = ship.x + ship.dx * dt
 
-    ship.lastBullet = ship.lastBullet + dt
-    ship.x = ship.x + ship.dx * dt
-    ship.y = ship.y + ship.dy * dt
-    ship.r = ship.r + math.rad(ship.dr)
+    end        ship.y = ship.y + ship.dy * dt
+        ship.r = ship.r + math.rad(ship.dr) * dt    ship.r = ship.r + math.rad(ship.dr) * dt
 end
 
 function updateBullet(bullet, dt)
     bullet.x = bullet.x + bullet.dx * dt
     bullet.y = bullet.y + bullet.dy * dt
+end
+
+function drawBullet(bullet)
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.rectangle("fill", bullet.x - 1, bullet.y - 1, 3, 3)
+end
+
+
+function bulletCollides(ship, bullet)
+
 end
 
 function collides(thing1, thing2)
@@ -241,16 +252,16 @@ function collides(thing1, thing2)
     left1 = b1.x 
     left2 = b2.x 
     right1 = b1.x + b1.size
-    right2 = b1.x + b2.size
+    right2 = b2.x + b2.size
     top1 = b1.y
     top2 = b2.y
     bottom1 = b1.y + b1.size
     bottom2 = b2.y + b2.size
     
-    --if either left or right edge of obj 1 is in between the left and right edges of obj 2
+    --if either left or right edge of obj 1 is in between the left and right edges(x-values)of obj 2
     if (left1 > left2 and left1 < right2) or (right1 > left2 and right1 < right2) then
-         --if the top or bottom edge is in between the top and bottom edges of obj 2
-        if (top1 < top2 and top1 > bottom2) or (top1 < top2 and top1 > bottom2) then
+         --if the top or bottom edge is in between the top and bottom edges (y-values) of obj 2
+        if (top1 > top2 and top1 < bottom2) or (bottom1 > top2 and bottom1 < bottom2) then
             return true
         end
     end
