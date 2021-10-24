@@ -6,100 +6,98 @@ WINDOW_WIDTH, WINDOW_HEIGHT = love.window.getDesktopDimensions()
 WINDOW_HEIGHT = WINDOW_HEIGHT - 45
 VIRTUAL_WIDTH = WINDOW_WIDTH / 2
 VIRTUAL_HEIGHT = WINDOW_HEIGHT / 2
+LIVES = 4
 
-ship1 = {}
-ship2 = {}
+ship1 = {
+    lives = LIVES,
+    sizeX = 32,
+    sizeY = 32,
+    spawnX = 50,
+    spawnY = VIRTUAL_HEIGHT / 2,
+    texture = love.graphics.newImage("assets/textures/ship1.png"),
+    rotKeyR = "d",
+    rotKeyL = "a",
+    thrustKey = "space",
+    fireKey = "v",
+    boundOffset = 2,
+    x = 0,
+    y = 0,
+    dx = 0,
+    dy = 0,
+    r = math.rad(0),
+    dr = 0,
+    lastBullet = 0,
+}
 
--- ship1 = {
---     score = 0
---     x = 50
---     y = VIRTUAL_HEIGHT / 2
---     dx = 0
---     dy = 0
---     r = math.rad(0)
---     dr = 0
---     texture = love.graphics.newImage("assets/textures/ship1.png")
---     rotKeyR = "d"
---     rotKeyL = "a"
---     thrustKey = "space"
--- }
-
--- ship2 = {
---     score = 0
---     x = VIRTUAL_WIDTH - 50
---     y = VIRTUAL_HEIGHT / 2
---     dx = 0
---     dy = 0
---     r = math.rad(0)
---     dr = 0
---     texture = love.graphics.newImage("assets/textures/ship2.png")
---     rotKeyR = "right"
---     rotKeyL = "left"
---     thrustKey = "m"
--- }
+ship2 = {
+    lives = LIVES;
+    sizeX = 32,
+    sizeY = 32,
+    spawnX = VIRTUAL_WIDTH - 50,
+    spawnY = VIRTUAL_HEIGHT / 2,
+    texture = love.graphics.newImage("assets/textures/ship2.png"),
+    rotKeyR = "right",
+    rotKeyL = "left",
+    thrustKey = "n",
+    fireKey = "m",
+    lastBullet = 0,
+    boundOffset = 2,
+    x = 0,
+    y = 0,
+    dx = 0,
+    dy = 0,
+    r = 0,
+    dr = 0,
+    lastBullet = 0,
+}
 
 function love.load()
     push:setupScreen(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT)    
     love.graphics.setDefaultFilter("nearest", "nearest")
+
+    ship1.boundingBox = BoundingBox:create(ship1)
+    ship2.boundingBox = BoundingBox:create(ship2)
+    
     gameState = 'title'
-    windowBounds = {}
-    windowBounds.x = 0
-    windowBounds.y = 0
-    windowBounds.sizeX = VIRTUAL_WIDTH
-    windowBounds.sizeY = VIRTUAL_HEIGHT
-    windowBounds.boundingBox = BoundingBox:create(windowBounds)
 end
 
 function love.update(dt)
-
     if gameState == 'title' then
         resetGame()
     elseif gameState == 'play' then
         updateShip(ship1, dt)
         updateShip(ship2, dt)
-        if score1 >= winScore or score2 > winScore then
+        if table.getn(bulletArray) > 0 then
+            for i = 1, table.getn(bulletArray) do
+                if(not bulletArray[i].disabled) then
+                    -- print(bulletArray[i].index)
+                    updateBullet(bulletArray[i], dt)
+                end
+            end
+        end
+        if collides(ship1, ship2) then
+            respawn(ship1)
+            respawn(ship2)
+        end
+        if ship1.lives <= 0 or ship2.lives <= 0 then
             gameState = 'win'
         end
     elseif gameState == 'win' then
-        --TODO: make ships dissappear and show winning screen
-        if score1 > score2 then
-            love.graphics.printf() --TODO: declare winner: Player 1
-        else
-            love.graphics.printf() --TODO: declare winner: Player 2
-        end
-        if love.keypressed.isDown('return') then
+        if love.keyboard.isDown('return') then
             gameState = 'title'
         end
     end 
-    
-    if table.getn(bulletArray) > 0 then
-        for i = 1, table.getn(bulletArray) do
-            updateBullet(bulletArray[i], dt) 
-        end
-    end
-
-    if collides(ship1, ship2) then
-        gameState = 'title'
-    end
 
 end
 
 function love.keypressed(key)
-    if key == '1' then
+    if key == 'r' then
         gameState = 'title'
     elseif key == 'return' then
         gameState = 'play'
     elseif key == 'escape' then
         love.event.quit()
-    -- elseif key == 'f' then
-    --     if love.window.getFullscreen() then
-    --         push:setupScreen(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, {fullscreen = false})
-    --     else
-    --         push:setupScreen(WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT, {fullscreen = true})
-    --     end
-    --     -- love.window.setFullscreen(not love.window.getFullscreen())
     end
-
 end
 
 function love.draw()
@@ -107,27 +105,43 @@ function love.draw()
 
     -- love.graphics.clear(0.1, 0.1, 0.1) -- set custom background color
 
-    if table.getn(bulletArray) > 0 then
-        for i = 1, table.getn(bulletArray) do
-            drawBullet(bulletArray[i]) 
+    if gameState == 'title' then
+        love.graphics.setFont(love.graphics.newFont(20))
+        love.graphics.print("press enter to start")
+    
+    elseif gameState == 'play' then
+        if table.getn(bulletArray) > 0 then
+            for i = 1, table.getn(bulletArray) do
+                if not bulletArray[i].disabled then
+                    drawBullet(bulletArray[i])
+                end
+            end
+        end
+        love.graphics.draw(ship1.texture, ship1.x, ship1.y, ship1.r, 1, 1, 16, 16)
+        love.graphics.draw(ship2.texture, ship2.x, ship2.y, ship2.r, 1, 1, 16, 16)
+        -- info bar
+        INFOBAR_HEIGHT = 25
+        love.graphics.setColor(0.1, 0.1, 0.1)
+        love.graphics.rectangle("fill", 0, VIRTUAL_HEIGHT - INFOBAR_HEIGHT, VIRTUAL_WIDTH, INFOBAR_HEIGHT)
+        -- score display 
+        love.graphics.setColor(0.8, 0.8, 0.8)
+        love.graphics.setFont(love.graphics.newFont(12))
+        love.graphics.print('red: ' .. ship1.lives .. ", blue: " .. ship2.lives, 6, VIRTUAL_HEIGHT - INFOBAR_HEIGHT + 5)
+        drawBoundingBox(ship1)
+        drawBoundingBox(ship2)
+        
+    elseif gameState == 'win' then
+        --display winning screen        
+        love.graphics.setFont(love.graphics.newFont(50))
+        love.graphics.setColor(1, 1, 1)
+        if ship1.lives > ship2.lives then
+            love.graphics.print("RED WINS")
+        elseif ship1.lives < ship2.lives then
+            love.graphics.print("BLUE WINS")
+        else
+            love.graphics.print("TIE")
         end
     end
-
-    love.graphics.draw(ship1.texture, ship1.x, ship1.y, ship1.r, 1, 1, 16, 16)
-    love.graphics.draw(ship2.texture, ship2.x, ship2.y, ship2.r, 1, 1, 16, 16)
-
-    -- info bar
-    INFOBAR_HEIGHT = 25
-    love.graphics.setColor(0.1, 0.1, 0.1)
-    love.graphics.rectangle("fill", 0, VIRTUAL_HEIGHT - INFOBAR_HEIGHT, VIRTUAL_WIDTH, INFOBAR_HEIGHT)
-
-    -- game state display display
-    love.graphics.setColor(0.8, 0.8, 0.8)
-    love.graphics.setFont(love.graphics.newFont(12))
-    love.graphics.print('state: ' .. gameState, 6, VIRTUAL_HEIGHT - INFOBAR_HEIGHT + 5)
-
-    drawBoundingBox(ship1)
-    drawBoundingBox(ship2)
 
     displayFPS()
 
@@ -148,53 +162,20 @@ end
 function drawBoundingBox(object)
     box = object.boundingBox
     love.graphics.setColor(1, 0, 0)
-    love.graphics.rectangle("line", box.x, box.y, box.size, box.size)
+    love.graphics.rectangle("line", box.x, box.y, box.sizeX, box.sizeY)
 end
 
 function updateBoundingBox(object)
-    object.boundingBox.x = (object.x - object.size / 2) + object.boundOffset
-    object.boundingBox.y = (object.y - object.size / 2) + object.boundOffset
+    object.boundingBox.x = (object.x - object.sizeX / 2) + object.boundOffset
+    object.boundingBox.y = (object.y - object.sizeY / 2) + object.boundOffset
 end
 
 function resetGame()
-    winScore = 7
     bulletArray = {}
-
-    score1 = 0
-    score2 = 0
-    ship1.sizeX = 32
-    ship1.sizeY = 32
-    ship1.x = 50
-    ship1.y = VIRTUAL_HEIGHT / 2
-    ship1.dx = 0
-    ship1.dy = 0
-    ship1.r = math.rad(0)
-    ship1.dr = 0
-    ship1.texture = love.graphics.newImage("assets/textures/ship1.png")
-    ship1.rotKeyR = "d"
-    ship1.rotKeyL = "a"
-    ship1.thrustKey = "space"
-    ship1.fireKey = "v"
-    ship1.lastBullet = 0
-    ship1.boundOffset = 2
-    ship1.boundingBox = BoundingBox:create(ship1)
-
-    ship2.sizeX = 32
-    ship2.sizeY = 32
-    ship2.x = VIRTUAL_WIDTH - 50
-    ship2.y = VIRTUAL_HEIGHT / 2
-    ship2.dx = 0
-    ship2.dy = 0
-    ship2.r = math.rad(0)
-    ship2.dr = 0
-    ship2.texture = love.graphics.newImage("assets/textures/ship2.png")
-    ship2.rotKeyR = "right"
-    ship2.rotKeyL = "left"
-    ship2.thrustKey = "n"
-    ship2.fireKey = "m"
-    ship2.lastBullet = 0
-    ship2.boundOffset = 2
-    ship2.boundingBox = BoundingBox:create(ship2)
+    ship1.lives = LIVES
+    ship2.lives = LIVES
+    respawn(ship1)
+    respawn(ship2)
 end
 
 function updateShip(ship, dt)
@@ -209,11 +190,12 @@ function updateShip(ship, dt)
         ship.dy = ship.dy - math.cos(ship.r)*1
     end
     
-    if love.keyboard.isDown(ship.fireKey) and ship.lastBullet > .2 then
-        bulletArray[table.getn(bulletArray) + 1] = Bullet:create(ship)
+    if love.keyboard.isDown(ship.fireKey) and ship.lastBullet > 0.1 then --cooldown firerate
+        bulletArray[table.getn(bulletArray) + 1] = Bullet:create(ship, table.getn(bulletArray))
+        -- Bullet:testupdate()
         ship.lastBullet = 0
     end
-    
+
     -- if love.keyboard.isDown('right') then
     --     ship.dr = ship.dr + 0.01
     -- elseif love.keyboard.isDown('left') then
@@ -226,27 +208,60 @@ function updateShip(ship, dt)
     --     end
     -- end
     updateBoundingBox(ship)
-    
-then    ship.lastBullet = ship.lastBullet + dt
-        ship.x = ship.x + ship.dx * dt
 
-    end        ship.y = ship.y + ship.dy * dt
-        ship.r = ship.r + math.rad(ship.dr) * dt    ship.r = ship.r + math.rad(ship.dr) * dt
+    
+    if ship.x > VIRTUAL_WIDTH and ship.dx > 0 then
+        ship.x = 0
+    end
+    if ship.x < 0 and ship.dx < 0 then
+        ship.x = VIRTUAL_WIDTH
+    end
+    if ship.y > VIRTUAL_HEIGHT and ship.dy > 0 then
+        ship.y = 0
+    end
+    if ship.y < 0 and ship.dy < 0 then
+        ship.y = VIRTUAL_HEIGHT - 9
+    end
+
+    
+    ship.lastBullet = ship.lastBullet + dt
+    ship.x = ship.x + ship.dx * dt
+    ship.y = ship.y + ship.dy * dt
+    ship.r = ship.r + math.rad(ship.dr) * dt
+end
+
+function respawn(ship)
+    ship.lives = ship.lives - 1
+    ship.x = ship.spawnX
+    ship.y = ship.spawnY
+    ship.dx = 0
+    ship.dy = 0
+    ship.r = math.rad(0)
+    ship.dr = 0
+    ship.lastBullet = 0
 end
 
 function updateBullet(bullet, dt)
     bullet.x = bullet.x + bullet.dx * dt
     bullet.y = bullet.y + bullet.dy * dt
+    updateBoundingBox(bullet)
+    
+    if bullet.x < 0 or bullet.x > VIRTUAL_WIDTH or bullet.y < 0 or bullet.y > VIRTUAL_HEIGHT then
+        bullet.disabled = true
+    end
+    if collides(bullet, ship2) and bullet.source == ship1 then
+        bullet.disabled = true
+        respawn(ship2)
+    end
+    if collides(bullet, ship1) and bullet.source == ship2 then
+        bullet.disabled = true
+        respawn(ship1)
+    end
 end
 
 function drawBullet(bullet)
     love.graphics.setColor(1, 1, 1)
-    love.graphics.rectangle("fill", bullet.x - 1, bullet.y - 1, 3, 3)
-end
-
-
-function bulletCollides(ship, bullet)
-
+    love.graphics.rectangle("fill", bullet.x - (bullet.sizeX / 2), bullet.y - (bullet.sizeY / 2), bullet.sizeX, bullet.sizeY)
 end
 
 function collides(thing1, thing2)
