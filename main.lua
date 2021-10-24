@@ -7,8 +7,23 @@ WINDOW_HEIGHT = WINDOW_HEIGHT - 45
 VIRTUAL_WIDTH = WINDOW_WIDTH / 2
 VIRTUAL_HEIGHT = WINDOW_HEIGHT / 2
 LIVES = 4
+FONT = love.graphics.newFont('assets/fonts/font.TTF', 20, 'normal', 4)
+FONT_LARGE = love.graphics.newFont('assets/fonts/font.TTF', 60, 'normal', 4)
+FONT_MEDIUM = love.graphics.newFont('assets/fonts/font.TTF', 35, 'normal', 4)
+FONT_SMALL = love.graphics.newFont('assets/fonts/font.TTF', 12, 'normal', 4)
+COLOR_REDTEXT = {204/255, 0, 0}
+COLOR_BLUETEXT = {60/255, 120/255, 216/255}
+
+sounds = {
+    ['explode'] = love.audio.newSource('assets/sounds/explosion.wav', 'static'),
+    ['shot1'] = love.audio.newSource('assets/sounds/shot1.wav', 'static'),
+    ['music'] = love.audio.newSource('assets/sounds/music.mp3', 'stream'),
+    ['music1'] = love.audio.newSource('assets/sounds/music1.mp3', 'stream'),
+    ['title'] = love.audio.newSource('assets/sounds/title.mp3', 'stream')
+}
 
 ship1 = {
+    thrust = false,
     lives = LIVES,
     sizeX = 32,
     sizeY = 32,
@@ -17,8 +32,8 @@ ship1 = {
     texture = love.graphics.newImage("assets/textures/ship1.png"),
     rotKeyR = "d",
     rotKeyL = "a",
-    thrustKey = "space",
-    fireKey = "v",
+    thrustKey = "w",
+    fireKey = "space",
     boundOffset = 2,
     x = 0,
     y = 0,
@@ -30,7 +45,8 @@ ship1 = {
 }
 
 ship2 = {
-    lives = LIVES;
+    thrust = false,
+    lives = LIVES,
     sizeX = 32,
     sizeY = 32,
     spawnX = VIRTUAL_WIDTH - 50,
@@ -38,8 +54,8 @@ ship2 = {
     texture = love.graphics.newImage("assets/textures/ship2.png"),
     rotKeyR = "right",
     rotKeyL = "left",
-    thrustKey = "n",
-    fireKey = "m",
+    thrustKey = "up",
+    fireKey = ",",
     lastBullet = 0,
     boundOffset = 2,
     x = 0,
@@ -51,22 +67,47 @@ ship2 = {
     lastBullet = 0,
 }
 
+
 function love.load()
+    showFPS = false
+    love.graphics.setFont(FONT)
     push:setupScreen(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT)    
     love.graphics.setDefaultFilter("nearest", "nearest")
-
+    math.randomseed(os.time())
     ship1.boundingBox = BoundingBox:create(ship1)
     ship2.boundingBox = BoundingBox:create(ship2)
-    
+    thrustTexture = love.graphics.newImage('assets/textures/thrust.png')
     gameState = 'title'
 end
 
 function love.update(dt)
     if gameState == 'title' then
+        if sounds['music']:isPlaying() then
+            sounds['music']:stop()
+        elseif sounds['music1']:isPlaying() then
+            sounds['music1']:stop()
+        end
+        if not sounds['title']:isPlaying() then
+            love.audio.play(sounds['title'])
+        end
         resetGame()
     elseif gameState == 'play' then
+        if sounds['title']:isPlaying() then
+            sounds['title']:stop()
+        end
+        if not sounds['music']:isPlaying() and not sounds['music1']:isPlaying() then
+            if math.random(0,1) == 1 then
+                sounds['music']:setLooping(true)
+                sounds['music']:play()
+            else
+                sounds['music1']:setLooping(true)
+                sounds['music1']:play()
+            end
+        end
+
         updateShip(ship1, dt)
         updateShip(ship2, dt)
+
         if table.getn(bulletArray) > 0 then
             for i = 1, table.getn(bulletArray) do
                 if(not bulletArray[i].disabled) then
@@ -76,6 +117,7 @@ function love.update(dt)
             end
         end
         if collides(ship1, ship2) then
+            sounds['explode']:play()
             respawn(ship1)
             respawn(ship2)
         end
@@ -91,12 +133,20 @@ function love.update(dt)
 end
 
 function love.keypressed(key)
-    if key == 'r' then
-        gameState = 'title'
+    if key == 'escape' then
+        if gameState == 'title' then
+            love.event.quit()
+        elseif gameState == 'play' or gameState == 'win' then
+            gameState = 'title'
+        end
     elseif key == 'return' then
-        gameState = 'play'
-    elseif key == 'escape' then
-        love.event.quit()
+        if gameState == 'title' then
+            gameState = 'play'
+        elseif gameState == 'win' then
+            gameState = 'title'
+        end
+    elseif key == '8' then
+        showFPS = not showFPS
     end
 end
 
@@ -106,9 +156,14 @@ function love.draw()
     -- love.graphics.clear(0.1, 0.1, 0.1) -- set custom background color
 
     if gameState == 'title' then
-        love.graphics.setFont(love.graphics.newFont(20))
-        love.graphics.print("press enter to start")
-    
+        love.graphics.setFont(FONT_LARGE)
+        love.graphics.printf( "SPACESCAPE", 0, VIRTUAL_HEIGHT/3, VIRTUAL_WIDTH , 'center')
+        love.graphics.setFont(FONT_SMALL)
+        love.graphics.printf( "CTRLS    ROTATE       THRUST     FIRE", 230, VIRTUAL_HEIGHT/3 + 65, VIRTUAL_WIDTH , 'left');
+        love.graphics.printf( "P1                    A   D                     W              SPACE", 230, VIRTUAL_HEIGHT/3 + 85, VIRTUAL_WIDTH , 'left')
+        love.graphics.printf( "P2          LEFT RIGHT       UP            COMMA", 230, VIRTUAL_HEIGHT/3 + 105, VIRTUAL_WIDTH , 'left')
+        love.graphics.printf( "PRESS  ENTER  TO  START", 0, VIRTUAL_HEIGHT - 65, VIRTUAL_WIDTH , 'center')
+        love.graphics.printf( "PRESS  ESC  TO  QUIT", 0, VIRTUAL_HEIGHT - 45, VIRTUAL_WIDTH , 'center')
     elseif gameState == 'play' then
         if table.getn(bulletArray) > 0 then
             for i = 1, table.getn(bulletArray) do
@@ -117,46 +172,56 @@ function love.draw()
                 end
             end
         end
+        if ship1.thrust == true then
+            love.graphics.draw(thrustTexture, ship1.x, ship1.y, ship1.r, 1, 1, 8, -14)
+        end
+        if ship2.thrust == true then
+            love.graphics.draw(thrustTexture, ship2.x, ship2.y, ship2.r, 1, 1, 8, -14)
+        end
         love.graphics.draw(ship1.texture, ship1.x, ship1.y, ship1.r, 1, 1, 16, 16)
         love.graphics.draw(ship2.texture, ship2.x, ship2.y, ship2.r, 1, 1, 16, 16)
         -- info bar
-        INFOBAR_HEIGHT = 25
-        love.graphics.setColor(0.1, 0.1, 0.1)
+        INFOBAR_HEIGHT = 30
+        love.graphics.setColor(0.8, 0.8, 0.8)
         love.graphics.rectangle("fill", 0, VIRTUAL_HEIGHT - INFOBAR_HEIGHT, VIRTUAL_WIDTH, INFOBAR_HEIGHT)
         -- score display 
-        love.graphics.setColor(0.8, 0.8, 0.8)
-        love.graphics.setFont(love.graphics.newFont(12))
-        love.graphics.print('red: ' .. ship1.lives .. ", blue: " .. ship2.lives, 6, VIRTUAL_HEIGHT - INFOBAR_HEIGHT + 5)
-        drawBoundingBox(ship1)
-        drawBoundingBox(ship2)
+        love.graphics.setFont(FONT_MEDIUM)
+        love.graphics.setColor(COLOR_REDTEXT)
+        love.graphics.printf(tostring(ship1.lives), 37, VIRTUAL_HEIGHT - INFOBAR_HEIGHT - 4, 50, 'left')
+        love.graphics.setColor(COLOR_BLUETEXT) --blue
+        love.graphics.printf(tostring(ship2.lives), VIRTUAL_WIDTH - 90, VIRTUAL_HEIGHT - INFOBAR_HEIGHT - 4, 50, 'right')
+        -- drawBoundingBox(ship1)
+        -- drawBoundingBox(ship2)
         
     elseif gameState == 'win' then
-        --display winning screen        
-        love.graphics.setFont(love.graphics.newFont(50))
+        --display winning screen
+        love.graphics.setFont(FONT_SMALL)   
+        love.graphics.printf( "PRESS  ENTER  FOR  MAIN  MENU", 0, VIRTUAL_HEIGHT - 65, VIRTUAL_WIDTH , 'center')
         love.graphics.setColor(1, 1, 1)
+        love.graphics.setFont(FONT_LARGE)   
         if ship1.lives > ship2.lives then
-            love.graphics.print("RED WINS")
+            love.graphics.setColor(COLOR_REDTEXT)
+            love.graphics.printf( "RED WINS!", 0, VIRTUAL_HEIGHT/3, VIRTUAL_WIDTH + 15, 'center')
         elseif ship1.lives < ship2.lives then
-            love.graphics.print("BLUE WINS")
+            love.graphics.setColor(COLOR_BLUETEXT)
+            love.graphics.printf("BLUE WINS", 0, VIRTUAL_HEIGHT/3, VIRTUAL_WIDTH + 15, 'center')
         else
-            love.graphics.print("TIE")
+            love.graphics.printf("TIE", 0, VIRTUAL_HEIGHT/3, VIRTUAL_WIDTH + 15, 'center')
         end
     end
 
-    displayFPS()
+    if showFPS then
+        displayFPS()
+    end
 
     push:finish()
 end
 
---[[
-    Renders the current FPS.
-]]
 function displayFPS()
     -- simple FPS display across all states
-    love.graphics.setFont(love.graphics.newFont(12))
-    love.graphics.setColor(0, 255/255, 0, 255/255)
-    love.graphics.print('FPS: ' .. tostring(love.timer.getFPS()), 10, 10)
-    love.graphics.setColor(255, 255, 255, 255)
+    love.graphics.setColor(0, 1, 0)
+    love.graphics.setFont(FONT_SMALL)
+    love.graphics.print('FPS  ' .. tostring(love.timer.getFPS()), 10, 10)
 end
 
 function drawBoundingBox(object)
@@ -186,14 +251,18 @@ function updateShip(ship, dt)
     end
 
     if love.keyboard.isDown(ship.thrustKey) then
+        ship.thrust = true
         ship.dx = ship.dx + math.sin(ship.r)*1
         ship.dy = ship.dy - math.cos(ship.r)*1
+    else
+        ship.thrust = false
     end
     
     if love.keyboard.isDown(ship.fireKey) and ship.lastBullet > 0.1 then --cooldown firerate
         bulletArray[table.getn(bulletArray) + 1] = Bullet:create(ship, table.getn(bulletArray))
         -- Bullet:testupdate()
         ship.lastBullet = 0
+        sounds['shot1']:play()
     end
 
     -- if love.keyboard.isDown('right') then
@@ -250,10 +319,13 @@ function updateBullet(bullet, dt)
         bullet.disabled = true
     end
     if collides(bullet, ship2) and bullet.source == ship1 then
+        sounds['explode']:play()
         bullet.disabled = true
         respawn(ship2)
+        
     end
     if collides(bullet, ship1) and bullet.source == ship2 then
+        sounds['explode']:play()
         bullet.disabled = true
         respawn(ship1)
     end
