@@ -13,6 +13,7 @@ FONT_MEDIUM = love.graphics.newFont('assets/fonts/font.TTF', 35, 'normal', 4)
 FONT_SMALL = love.graphics.newFont('assets/fonts/font.TTF', 12, 'normal', 4)
 COLOR_REDTEXT = {204/255, 0, 0}
 COLOR_BLUETEXT = {60/255, 120/255, 216/255}
+EXPLOSION_DURATION = 0.3
 
 backgrounds = {
     love.graphics.newImage('assets/textures/background1.png'),
@@ -51,7 +52,7 @@ ship1 = {
     spawnR = 45,
     lastBullet = 0,
     exploding = false,
-    explodeTimer = 1
+    explodeTimer = EXPLOSION_DURATION
 }
 
 ship2 = {
@@ -77,7 +78,7 @@ ship2 = {
     spawnR = -45,
     lastBullet = 0,
     exploding = false,
-    explodeTimer = 1
+    explodeTimer = EXPLOSION_DURATION
 }
 
 function love.load()
@@ -132,13 +133,15 @@ function love.update(dt)
                 end
             end
         end
-        if collides(ship1, ship2) and not (ship1.exploding and ship2.exploding) then
+
+        if collides(ship1, ship2) and ((not ship1.exploding) and (not ship2.exploding)) then
             sounds['hit']:play()
             explode(ship1)
             explode(ship2)
             -- respawn(ship1)
             -- respawn(ship2)
         end
+
         if ship1.lives <= 0 or ship2.lives <= 0 then
             sounds['die']:play()
             gameState = 'win'
@@ -195,8 +198,8 @@ function love.draw()
             end
         end
 
+        love.graphics.setColor(1, 1, 1)
         if not ship1.exploding then
-            love.graphics.setColor(1, 1, 1)
             if ship1.thrust == true then
                 love.graphics.draw(thrustTexture, ship1.x, ship1.y, ship1.r, 1, 1, 8, -14)
             end
@@ -274,8 +277,8 @@ function resetGame()
     ship2.lives = LIVES
     ship1.exploding = false
     ship2.exploding = false
-    ship1.explodeTimer = 1
-    ship2.explodeTimer = 1
+    ship1.explodeTimer = EXPLOSION_DURATION
+    ship2.explodeTimer = EXPLOSION_DURATION
     respawn(ship1)
     respawn(ship2)
 end
@@ -284,7 +287,7 @@ function updateShip(ship, dt)
     if ship.exploding then
         if ship.explodeTimer <= 0 then
             ship.exploding = false
-            ship.explodeTimer = 1
+            ship.explodeTimer = EXPLOSION_DURATION
             respawn(ship)
         else
             ship.explodeTimer = ship.explodeTimer - dt
@@ -348,7 +351,7 @@ end
 
 function explode(ship)
     ship.exploding = true
-    ship.explodeTimer = 1
+    ship.explodeTimer = EXPLOSION_DURATION
 end
 
 function updateBullet(bullet, dt)
