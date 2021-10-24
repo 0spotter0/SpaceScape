@@ -6,8 +6,10 @@ function Bullet:create(ship, index)
 
     b.source = ship
     b.index = index
+    b.texture = love.graphics.newImage("assets/textures/bullet.png")
     b.x = ship.x
     b.y = ship.y - math.cos(ship.r)
+    b.r = ship.r
     b.sizeX = 3
     b.sizeY = 3
     b.boundOffset = 0

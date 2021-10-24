@@ -14,8 +14,15 @@ FONT_SMALL = love.graphics.newFont('assets/fonts/font.TTF', 12, 'normal', 4)
 COLOR_REDTEXT = {204/255, 0, 0}
 COLOR_BLUETEXT = {60/255, 120/255, 216/255}
 
+backgrounds = {
+    love.graphics.newImage('assets/textures/background1.png'),
+    love.graphics.newImage('assets/textures/background2.png'),
+    love.graphics.newImage('assets/textures/background3.png')
+}
+
 sounds = {
-    ['explode'] = love.audio.newSource('assets/sounds/explosion.wav', 'static'),
+    ['hit'] = love.audio.newSource('assets/sounds/hit.wav', 'static'),
+    ['die'] = love.audio.newSource('assets/sounds/die.wav', 'static'),
     ['shot1'] = love.audio.newSource('assets/sounds/shot1.wav', 'static'),
     ['music'] = love.audio.newSource('assets/sounds/music.mp3', 'stream'),
     ['music1'] = love.audio.newSource('assets/sounds/music1.mp3', 'stream'),
@@ -28,7 +35,7 @@ ship1 = {
     sizeX = 32,
     sizeY = 32,
     spawnX = 50,
-    spawnY = VIRTUAL_HEIGHT / 2,
+    spawnY = VIRTUAL_HEIGHT - VIRTUAL_HEIGHT / 7,
     texture = love.graphics.newImage("assets/textures/ship1.png"),
     rotKeyR = "d",
     rotKeyL = "a",
@@ -39,9 +46,10 @@ ship1 = {
     y = 0,
     dx = 0,
     dy = 0,
-    r = math.rad(0),
+    r = 0,
     dr = 0,
-    lastBullet = 0,
+    spawnR = 45,
+    lastBullet = 0
 }
 
 ship2 = {
@@ -50,7 +58,7 @@ ship2 = {
     sizeX = 32,
     sizeY = 32,
     spawnX = VIRTUAL_WIDTH - 50,
-    spawnY = VIRTUAL_HEIGHT / 2,
+    spawnY = VIRTUAL_HEIGHT - VIRTUAL_HEIGHT / 7,
     texture = love.graphics.newImage("assets/textures/ship2.png"),
     rotKeyR = "right",
     rotKeyL = "left",
@@ -64,14 +72,15 @@ ship2 = {
     dy = 0,
     r = 0,
     dr = 0,
-    lastBullet = 0,
+    spawnR = -45,
+    lastBullet = 0
 }
 
-
 function love.load()
+    push:setupScreen(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT)    
+    background = nil
     showFPS = false
     love.graphics.setFont(FONT)
-    push:setupScreen(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, WINDOW_WIDTH, WINDOW_HEIGHT)    
     love.graphics.setDefaultFilter("nearest", "nearest")
     math.randomseed(os.time())
     ship1.boundingBox = BoundingBox:create(ship1)
@@ -82,6 +91,7 @@ end
 
 function love.update(dt)
     if gameState == 'title' then
+        background = nil
         if sounds['music']:isPlaying() then
             sounds['music']:stop()
         elseif sounds['music1']:isPlaying() then
@@ -117,11 +127,12 @@ function love.update(dt)
             end
         end
         if collides(ship1, ship2) then
-            sounds['explode']:play()
+            sounds['hit']:play()
             respawn(ship1)
             respawn(ship2)
         end
         if ship1.lives <= 0 or ship2.lives <= 0 then
+            sounds['die']:play()
             gameState = 'win'
         end
     elseif gameState == 'win' then
@@ -152,8 +163,7 @@ end
 
 function love.draw()
     push:start()
-
-    -- love.graphics.clear(0.1, 0.1, 0.1) -- set custom background color
+    -- love.graphics.clear(0, 0, 0) -- set custom solid background color
 
     if gameState == 'title' then
         love.graphics.setFont(FONT_LARGE)
@@ -165,6 +175,10 @@ function love.draw()
         love.graphics.printf( "PRESS  ENTER  TO  START", 0, VIRTUAL_HEIGHT - 65, VIRTUAL_WIDTH , 'center')
         love.graphics.printf( "PRESS  ESC  TO  QUIT", 0, VIRTUAL_HEIGHT - 45, VIRTUAL_WIDTH , 'center')
     elseif gameState == 'play' then
+        if background == nil then
+            background = backgrounds[math.random(1, table.getn(backgrounds))]
+        end
+        love.graphics.draw(background, 0, 0, 0, WINDOW_WIDTH / 2560)
         if table.getn(bulletArray) > 0 then
             for i = 1, table.getn(bulletArray) do
                 if not bulletArray[i].disabled then
@@ -172,6 +186,7 @@ function love.draw()
                 end
             end
         end
+        love.graphics.setColor(1, 1, 1)
         if ship1.thrust == true then
             love.graphics.draw(thrustTexture, ship1.x, ship1.y, ship1.r, 1, 1, 8, -14)
         end
@@ -182,7 +197,7 @@ function love.draw()
         love.graphics.draw(ship2.texture, ship2.x, ship2.y, ship2.r, 1, 1, 16, 16)
         -- info bar
         INFOBAR_HEIGHT = 30
-        love.graphics.setColor(0.8, 0.8, 0.8)
+        love.graphics.setColor(0.1, 0.1, 0.1)
         love.graphics.rectangle("fill", 0, VIRTUAL_HEIGHT - INFOBAR_HEIGHT, VIRTUAL_WIDTH, INFOBAR_HEIGHT)
         -- score display 
         love.graphics.setFont(FONT_MEDIUM)
@@ -245,40 +260,28 @@ end
 
 function updateShip(ship, dt)
     if love.keyboard.isDown(ship.rotKeyR) then
-        ship.r = ship.r + 0.05
+        ship.r = ship.r + 4 * dt
     elseif love.keyboard.isDown(ship.rotKeyL) then
-        ship.r = ship.r - 0.05
+        ship.r = ship.r - 4 * dt
     end
 
     if love.keyboard.isDown(ship.thrustKey) then
         ship.thrust = true
-        ship.dx = ship.dx + math.sin(ship.r)*1
-        ship.dy = ship.dy - math.cos(ship.r)*1
+        ship.dx = ship.dx + math.sin(ship.r) * 200 * dt
+        ship.dy = ship.dy - math.cos(ship.r) * 200 * dt
     else
         ship.thrust = false
     end
     
-    if love.keyboard.isDown(ship.fireKey) and ship.lastBullet > 0.1 then --cooldown firerate
+    if love.keyboard.isDown(ship.fireKey) and ship.lastBullet > 0.2 then --cooldown fire rate
         bulletArray[table.getn(bulletArray) + 1] = Bullet:create(ship, table.getn(bulletArray))
         -- Bullet:testupdate()
         ship.lastBullet = 0
         sounds['shot1']:play()
     end
 
-    -- if love.keyboard.isDown('right') then
-    --     ship.dr = ship.dr + 0.01
-    -- elseif love.keyboard.isDown('left') then
-    --     ship.dr = ship.dr - 0.01
-    -- else
-    --     if ship.dr > 0 then
-    --         ship.dr = ship.dr - 0.25
-    --     elseif ship.dr < 0 then
-    --         ship.dr = ship.dr + 0.25
-    --     end
-    -- end
     updateBoundingBox(ship)
 
-    
     if ship.x > VIRTUAL_WIDTH and ship.dx > 0 then
         ship.x = 0
     end
@@ -292,7 +295,6 @@ function updateShip(ship, dt)
         ship.y = VIRTUAL_HEIGHT - 9
     end
 
-    
     ship.lastBullet = ship.lastBullet + dt
     ship.x = ship.x + ship.dx * dt
     ship.y = ship.y + ship.dy * dt
@@ -305,9 +307,15 @@ function respawn(ship)
     ship.y = ship.spawnY
     ship.dx = 0
     ship.dy = 0
-    ship.r = math.rad(0)
+    ship.r = math.rad(ship.spawnR)
     ship.dr = 0
     ship.lastBullet = 0
+end
+
+function explode(ship)
+    -- explosionImage = love.graphics.newImage("assets/textures/explosion.png")
+
+    -- love.graphics.draw(explosionImage, ship.x, ship.y, 0, 1, 1, 16, 16)
 end
 
 function updateBullet(bullet, dt)
@@ -319,21 +327,29 @@ function updateBullet(bullet, dt)
         bullet.disabled = true
     end
     if collides(bullet, ship2) and bullet.source == ship1 then
-        sounds['explode']:play()
         bullet.disabled = true
+        sounds['hit']:play()
+        explode(ship2)
         respawn(ship2)
         
     end
     if collides(bullet, ship1) and bullet.source == ship2 then
-        sounds['explode']:play()
         bullet.disabled = true
+        sounds['hit']:play()
+        explode(ship1)
         respawn(ship1)
     end
 end
 
 function drawBullet(bullet)
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.rectangle("fill", bullet.x - (bullet.sizeX / 2), bullet.y - (bullet.sizeY / 2), bullet.sizeX, bullet.sizeY)
+    if bullet.source == ship1 then
+        love.graphics.setColor(1, 0.5, 0.5)
+    else
+        love.graphics.setColor(0.5, 0.5, 1)
+    end
+
+    love.graphics.draw(bullet.texture, bullet.x, bullet.y, bullet.r, 2, 2)
+    -- love.graphics.rectangle("fill", bullet.x - (bullet.sizeX / 2), bullet.y - (bullet.sizeY / 2), bullet.sizeX, bullet.sizeY)
 end
 
 function collides(thing1, thing2)
