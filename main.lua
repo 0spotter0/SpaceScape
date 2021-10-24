@@ -49,7 +49,9 @@ ship1 = {
     r = 0,
     dr = 0,
     spawnR = 45,
-    lastBullet = 0
+    lastBullet = 0,
+    exploding = false,
+    explodeTimer = 1
 }
 
 ship2 = {
@@ -73,7 +75,9 @@ ship2 = {
     r = 0,
     dr = 0,
     spawnR = -45,
-    lastBullet = 0
+    lastBullet = 0,
+    exploding = false,
+    explodeTimer = 1
 }
 
 function love.load()
@@ -86,6 +90,7 @@ function love.load()
     ship1.boundingBox = BoundingBox:create(ship1)
     ship2.boundingBox = BoundingBox:create(ship2)
     thrustTexture = love.graphics.newImage('assets/textures/thrust.png')
+    explosionTexture = love.graphics.newImage("assets/textures/explosion.png")
     gameState = 'title'
 end
 
@@ -101,6 +106,7 @@ function love.update(dt)
             love.audio.play(sounds['title'])
         end
         resetGame()
+        
     elseif gameState == 'play' then
         if sounds['title']:isPlaying() then
             sounds['title']:stop()
@@ -126,10 +132,12 @@ function love.update(dt)
                 end
             end
         end
-        if collides(ship1, ship2) then
+        if collides(ship1, ship2) and not (ship1.exploding and ship2.exploding) then
             sounds['hit']:play()
-            respawn(ship1)
-            respawn(ship2)
+            explode(ship1)
+            explode(ship2)
+            -- respawn(ship1)
+            -- respawn(ship2)
         end
         if ship1.lives <= 0 or ship2.lives <= 0 then
             sounds['die']:play()
@@ -186,15 +194,25 @@ function love.draw()
                 end
             end
         end
-        love.graphics.setColor(1, 1, 1)
-        if ship1.thrust == true then
-            love.graphics.draw(thrustTexture, ship1.x, ship1.y, ship1.r, 1, 1, 8, -14)
+
+        if not ship1.exploding then
+            love.graphics.setColor(1, 1, 1)
+            if ship1.thrust == true then
+                love.graphics.draw(thrustTexture, ship1.x, ship1.y, ship1.r, 1, 1, 8, -14)
+            end
+            love.graphics.draw(ship1.texture, ship1.x, ship1.y, ship1.r, 1, 1, 16, 16)
+        else
+            love.graphics.draw(explosionTexture, ship1.x, ship1.y, 0, 1, 1, 16, 16)
         end
-        if ship2.thrust == true then
-            love.graphics.draw(thrustTexture, ship2.x, ship2.y, ship2.r, 1, 1, 8, -14)
+        if not ship2.exploding then
+            if ship2.thrust == true then
+                love.graphics.draw(thrustTexture, ship2.x, ship2.y, ship2.r, 1, 1, 8, -14)
+            end
+            love.graphics.draw(ship2.texture, ship2.x, ship2.y, ship2.r, 1, 1, 16, 16)
+        else
+            love.graphics.draw(explosionTexture, ship2.x, ship2.y, 0, 1, 1, 16, 16)
         end
-        love.graphics.draw(ship1.texture, ship1.x, ship1.y, ship1.r, 1, 1, 16, 16)
-        love.graphics.draw(ship2.texture, ship2.x, ship2.y, ship2.r, 1, 1, 16, 16)
+
         -- info bar
         INFOBAR_HEIGHT = 30
         love.graphics.setColor(0.1, 0.1, 0.1)
@@ -254,57 +272,73 @@ function resetGame()
     bulletArray = {}
     ship1.lives = LIVES
     ship2.lives = LIVES
+    ship1.exploding = false
+    ship2.exploding = false
+    ship1.explodeTimer = 1
+    ship2.explodeTimer = 1
     respawn(ship1)
     respawn(ship2)
 end
 
 function updateShip(ship, dt)
-    if love.keyboard.isDown(ship.rotKeyR) then
-        ship.r = ship.r + 4 * dt
-    elseif love.keyboard.isDown(ship.rotKeyL) then
-        ship.r = ship.r - 4 * dt
-    end
-
-    if love.keyboard.isDown(ship.thrustKey) then
-        ship.thrust = true
-        ship.dx = ship.dx + math.sin(ship.r) * 200 * dt
-        ship.dy = ship.dy - math.cos(ship.r) * 200 * dt
+    if ship.exploding then
+        if ship.explodeTimer <= 0 then
+            ship.exploding = false
+            ship.explodeTimer = 1
+            respawn(ship)
+        else
+            ship.explodeTimer = ship.explodeTimer - dt
+        end
     else
-        ship.thrust = false
-    end
-    
-    if love.keyboard.isDown(ship.fireKey) and ship.lastBullet > 0.2 then --cooldown fire rate
-        bulletArray[table.getn(bulletArray) + 1] = Bullet:create(ship, table.getn(bulletArray))
-        -- Bullet:testupdate()
-        ship.lastBullet = 0
-        sounds['shot1']:play()
-    end
 
-    updateBoundingBox(ship)
+        if love.keyboard.isDown(ship.rotKeyR) then
+            ship.r = ship.r + 4 * dt
+        elseif love.keyboard.isDown(ship.rotKeyL) then
+            ship.r = ship.r - 4 * dt
+        end
 
-    if ship.x > VIRTUAL_WIDTH and ship.dx > 0 then
-        ship.x = 0
-    end
-    if ship.x < 0 and ship.dx < 0 then
-        ship.x = VIRTUAL_WIDTH
-    end
-    if ship.y > VIRTUAL_HEIGHT and ship.dy > 0 then
-        ship.y = 0
-    end
-    if ship.y < 0 and ship.dy < 0 then
-        ship.y = VIRTUAL_HEIGHT - 9
-    end
+        if love.keyboard.isDown(ship.thrustKey) then
+            ship.thrust = true
+            ship.dx = ship.dx + math.sin(ship.r) * 200 * dt
+            ship.dy = ship.dy - math.cos(ship.r) * 200 * dt
+        else
+            ship.thrust = false
+        end
+        
+        if love.keyboard.isDown(ship.fireKey) and ship.lastBullet > 0.2 then --cooldown fire rate
+            bulletArray[table.getn(bulletArray) + 1] = Bullet:create(ship, table.getn(bulletArray))
+            -- Bullet:testupdate()
+            ship.lastBullet = 0
+            sounds['shot1']:play()
+        end
 
+        updateBoundingBox(ship)
+
+        if ship.x > VIRTUAL_WIDTH and ship.dx > 0 then
+            ship.x = 0
+        end
+        if ship.x < 0 and ship.dx < 0 then
+            ship.x = VIRTUAL_WIDTH
+        end
+        if ship.y > VIRTUAL_HEIGHT and ship.dy > 0 then
+            ship.y = 0
+        end
+        if ship.y < 0 and ship.dy < 0 then
+            ship.y = VIRTUAL_HEIGHT - 9
+        end
+
+        ship.x = ship.x + ship.dx * dt
+        ship.y = ship.y + ship.dy * dt
+        ship.r = ship.r + math.rad(ship.dr) * dt
+    end
     ship.lastBullet = ship.lastBullet + dt
-    ship.x = ship.x + ship.dx * dt
-    ship.y = ship.y + ship.dy * dt
-    ship.r = ship.r + math.rad(ship.dr) * dt
 end
 
 function respawn(ship)
     ship.lives = ship.lives - 1
     ship.x = ship.spawnX
     ship.y = ship.spawnY
+    updateBoundingBox(ship)
     ship.dx = 0
     ship.dy = 0
     ship.r = math.rad(ship.spawnR)
@@ -313,9 +347,8 @@ function respawn(ship)
 end
 
 function explode(ship)
-    -- explosionImage = love.graphics.newImage("assets/textures/explosion.png")
-
-    -- love.graphics.draw(explosionImage, ship.x, ship.y, 0, 1, 1, 16, 16)
+    ship.exploding = true
+    ship.explodeTimer = 1
 end
 
 function updateBullet(bullet, dt)
@@ -330,14 +363,14 @@ function updateBullet(bullet, dt)
         bullet.disabled = true
         sounds['hit']:play()
         explode(ship2)
-        respawn(ship2)
+        -- respawn(ship2)
         
     end
     if collides(bullet, ship1) and bullet.source == ship2 then
         bullet.disabled = true
         sounds['hit']:play()
         explode(ship1)
-        respawn(ship1)
+        -- respawn(ship1)
     end
 end
 
