@@ -10,7 +10,7 @@ LIVES = 4
 FONT = love.graphics.newFont('assets/fonts/font.TTF', 20, 'normal', 4)
 FONT_LARGE = love.graphics.newFont('assets/fonts/font.TTF', 60, 'normal', 4)
 FONT_MEDIUM = love.graphics.newFont('assets/fonts/font.TTF', 35, 'normal', 4)
-FONT_SMALL = love.graphics.newFont('assets/fonts/font.TTF', 12, 'normal', 4)
+FONT_SMALL = love.graphics.newFont('assets/fonts/font.TTF', 14, 'normal', 4)
 COLOR_REDTEXT = {204/255, 0, 0}
 COLOR_BLUETEXT = {60/255, 120/255, 216/255}
 EXPLOSION_DURATION = 0.3
@@ -180,9 +180,9 @@ function love.draw()
         love.graphics.setFont(FONT_LARGE)
         love.graphics.printf( "SPACESCAPE", 0, VIRTUAL_HEIGHT/3, VIRTUAL_WIDTH , 'center')
         love.graphics.setFont(FONT_SMALL)
-        love.graphics.printf( "CTRLS    ROTATE       THRUST     FIRE", 230, VIRTUAL_HEIGHT/3 + 65, VIRTUAL_WIDTH , 'left');
-        love.graphics.printf( "P1                    A   D                     W              SPACE", 230, VIRTUAL_HEIGHT/3 + 85, VIRTUAL_WIDTH , 'left')
-        love.graphics.printf( "P2          LEFT RIGHT       UP            COMMA", 230, VIRTUAL_HEIGHT/3 + 105, VIRTUAL_WIDTH , 'left')
+        love.graphics.printf( "CTRLS      ROTATE       THRUST     FIRE", 0, VIRTUAL_HEIGHT/3 + 65, VIRTUAL_WIDTH , 'center');
+        love.graphics.printf( "P1                      A   D                     W                SPACE", 0, VIRTUAL_HEIGHT/3 + 85, VIRTUAL_WIDTH , 'center')
+        love.graphics.printf( "P2          LEFT RIGHT       UP            COMMA", 0, VIRTUAL_HEIGHT/3 + 105, VIRTUAL_WIDTH , 'center')
         love.graphics.printf( "PRESS  ENTER  TO  START", 0, VIRTUAL_HEIGHT - 65, VIRTUAL_WIDTH , 'center')
         love.graphics.printf( "PRESS  ESC  TO  QUIT", 0, VIRTUAL_HEIGHT - 45, VIRTUAL_WIDTH , 'center')
     elseif gameState == 'play' then
