@@ -7,5 +7,4 @@ rules:
 3. If the players crash into each other, both player loses a life.
 4. The player that still has lives remaining after one player dies, wins. The game is a tie if both players end with 0 lives at the same time, in the case of a mutual collision when both players have 1 life remaining.
 
-This project is made for the DandyHacks hackathon.
-url: https://devpost.com/software/spacescape
+This project is made for the DandyHacks hackathon at https://devpost.com/software/spacescape
