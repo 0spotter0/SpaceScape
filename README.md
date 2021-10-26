@@ -1,4 +1,4 @@
-# Spacescape
+# SpaceScape
 
 [Download latest release](https://github.com/0spotter0/spacegame/releases/latest)
 
