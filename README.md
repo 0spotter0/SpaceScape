@@ -1,4 +1,7 @@
 # Spacescape
+
+[Download latest release](https://github.com/0spotter0/spacegame/releases/latest)
+
 Spacescape is a retro, arcade-style, space themed multiplayer game with the goal of being the last man standing.
 
 rules:
