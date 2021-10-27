@@ -14,6 +14,7 @@ FONT_SMALL = love.graphics.newFont('assets/fonts/font.TTF', 14, 'normal', 4)
 COLOR_REDTEXT = {204/255, 0, 0}
 COLOR_BLUETEXT = {60/255, 120/255, 216/255}
 EXPLOSION_DURATION = 0.3
+MAX_ROTATION_SPEED = 400
 
 backgrounds = {
     love.graphics.newImage('assets/textures/background1.png'),
@@ -294,11 +295,58 @@ function updateShip(ship, dt)
         end
     else
 
-        if love.keyboard.isDown(ship.rotKeyR) then
-            ship.r = ship.r + 4 * dt
-        elseif love.keyboard.isDown(ship.rotKeyL) then
-            ship.r = ship.r - 4 * dt
+        rotationChangeAmount = 1500 * dt
+        if math.abs(ship.dr + rotationChangeAmount) <= MAX_ROTATION_SPEED then
+            if love.keyboard.isDown(ship.rotKeyR) then
+                ship.dr = ship.dr + rotationChangeAmount
+            elseif love.keyboard.isDown(ship.rotKeyL) then
+                ship.dr = ship.dr - rotationChangeAmount
+            end
         end
+        
+        if (not love.keyboard.isDown(ship.rotKeyR)) and (not love.keyboard.isDown(ship.rotKeyL)) then
+            if ship.dr > 0 then
+                ship.dr = ship.dr - rotationChangeAmount
+            elseif ship.dr < 0 then
+                ship.dr = ship.dr + rotationChangeAmount
+            end
+        end
+
+        -- if rotation key isDown() then
+        --     if abs(durrent dr + what we would add) < MAX_ROTATION_SPEED then
+        --         add rotation to dr
+        --     end
+        -- end
+        -- if both rotation keys are NOT DOWN then
+        --     if dr > 0
+        --         subtract from dr
+        --     elseif dr < 0
+        --         add a bit to dr
+        
+
+        -- if math.abs(ship.dr) >= MAX_ROTATION_SPEED then
+        --     if ship.dr > 0 then
+        --         ship.dr = MAX_ROTATION_SPEED
+        --     else
+        --         ship.dr = -MAX_ROTATION_SPEED
+        --     end
+        -- end
+
+        -- if love.keyboard.isDown(ship.rotKeyR) then
+        --     if (ship.dr + 400) >= MAX_ROTATION_SPEED then
+        --         ship.dr = MAX_ROTATION_SPEED * dt
+        --     ship.dr = ship.dr + 400 * dt
+        -- elseif love.keyboard.isDown(ship.rotKeyL) then
+        --     ship.dr = ship.dr - 400 * dt
+        -- end
+
+        -- if (not love.keyboard.isDown(ship.rotKeyR)) and (not love.keyboard.isDown(ship.rotKeyL)) then
+        --     if ship.dr > 0 then
+        --         ship.dr = ship.dr - 1200 * dt
+        --     elseif ship.dr < 0 then
+        --         ship.dr = ship.dr + 1200 * dt
+        --     end
+        -- end
 
         if love.keyboard.isDown(ship.thrustKey) then
             ship.thrust = true
